@@ -105,6 +105,13 @@ popd
 cp -pr NTS ZTS
 %endif
 
+cat > %{ini_name} << EOF
+; Enable xdebug extension module
+zend_extension=%{pecl_name}.so
+
+; see http://xdebug.org/docs/all_settings
+EOF
+
 
 %build
 pushd NTS
@@ -137,6 +144,7 @@ popd
 %install
 # install NTS extension
 make -C NTS install INSTALL_ROOT=%{buildroot}
+install -Dpm 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
 # install debugclient
 install -Dpm 755 NTS/debugclient/debugclient \
@@ -145,26 +153,10 @@ install -Dpm 755 NTS/debugclient/debugclient \
 # install package registration file
 install -Dpm 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
 
-# install config file
-install -d %{buildroot}%{php_inidir}
-cat << 'EOF' | tee %{buildroot}%{php_inidir}/%{ini_name}
-; Enable xdebug extension module
-zend_extension=%{pecl_name}.so
-
-; see http://xdebug.org/docs/all_settings
-EOF
-
 %if %{with_zts}
 # Install ZTS extension
 make -C ZTS install INSTALL_ROOT=%{buildroot}
-
-install -d %{buildroot}%{php_ztsinidir}
-cat << 'EOF' | tee %{buildroot}%{php_ztsinidir}/%{ini_name}
-; Enable xdebug extension module
-zend_extension=%{pecl_name}.so
-
-; see http://xdebug.org/docs/all_settings
-EOF
+install -Dpm 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
 %endif
 
 # Documentation
@@ -219,6 +211,7 @@ fi
 - Install package.xml as %%{pecl_name}.xml, not %%{name}.xml
 - Build with pear1u (via "pecl" virtual provides)
 - Re-add scriptlets (file triggers not yet available in EL)
+- Create ini file once during %%prep, instead of twice during %%install
 
 * Mon Dec  5 2016 Remi Collet <remi@fedoraproject.org> - 2.5.0-1
 - update to 2.5.0
