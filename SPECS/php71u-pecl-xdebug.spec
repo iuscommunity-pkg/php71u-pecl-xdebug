@@ -1,3 +1,5 @@
+# IUS spec file for php71u-pecl-xdebug, forked from:
+#
 # Fedora spec file for php-pecl-xdebug
 #
 # Copyright (c) 2010-2016 Remi Collet
@@ -13,13 +15,13 @@
 %global with_zts  0%{?__ztsphp:1}
 # XDebug should be loaded after opcache
 %global ini_name  15-%{pecl_name}.ini
-#global prever    RC1
+%global php_base  php71u
 
-Name:           php-pecl-xdebug
+Name:           %{php_base}-pecl-xdebug
 Summary:        PECL package for debugging PHP scripts
 Version:        2.5.0
-Release:        1%{?dist}
-Source0:        http://pecl.php.net/get/%{pecl_name}-%{version}%{?prever}.tgz
+Release:        1.ius%{?dist}
+Source0:        http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
 # The Xdebug License, version 1.01
 # (Based on "The PHP License", version 3.0)
@@ -28,17 +30,35 @@ Group:          Development/Languages
 URL:            http://xdebug.org/
 
 BuildRequires:  php-pear  > 1.9.1
-BuildRequires:  php-devel > 5.5
+BuildRequires:  %{php_base}-devel
 BuildRequires:  libedit-devel
 BuildRequires:  libtool
 
 Requires:       php(zend-abi) = %{php_zend_api}
 Requires:       php(api) = %{php_core_api}
 
+# provide the stock name
+Provides:       php-pecl-%{pecl_name} = %{version}
+Provides:       php-pecl-%{pecl_name}%{?_isa} = %{version}
+
+# provide the stock and IUS names without pecl
 Provides:       php-%{pecl_name} = %{version}
 Provides:       php-%{pecl_name}%{?_isa} = %{version}
+Provides:       %{php_base}-%{pecl_name} = %{version}
+Provides:       %{php_base}-%{pecl_name}%{?_isa} = %{version}
+
+# provide the stock and IUS names in pecl() format
 Provides:       php-pecl(Xdebug) = %{version}
 Provides:       php-pecl(Xdebug)%{?_isa} = %{version}
+Provides:       %{php_base}-pecl(Xdebug) = %{version}
+Provides:       %{php_base}-pecl(Xdebug)%{?_isa} = %{version}
+
+# conflict with the stock name
+Conflicts:      php-pecl-%{pecl_name} < %{version}
+
+%{?filter_provides_in: %filter_provides_in %{php_extdir}/.*\.so$}
+%{?filter_provides_in: %filter_provides_in %{php_ztsextdir}/.*\.so$}
+%{?filter_setup}
 
 
 %description
@@ -62,20 +82,20 @@ Xdebug also provides:
 
 %prep
 %setup -qc
-mv %{pecl_name}-%{version}%{?prever} NTS
+mv %{pecl_name}-%{version} NTS
 
 sed -e '/LICENSE/s/role="doc"/role="src"/' -i package.xml
 
-cd NTS
+pushd NTS
 
 # Check extension version
 ver=$(sed -n '/XDEBUG_VERSION/{s/.* "//;s/".*$//;p}' php_xdebug.h)
-if test "$ver" != "%{version}%{?prever:rc1}"; then
-   : Error: Upstream XDEBUG_VERSION version is ${ver}, expecting %{version}%{?prever}.
+if test "$ver" != "%{version}"; then
+   : Error: Upstream XDEBUG_VERSION version is ${ver}, expecting %{version}.
    exit 1
 fi
 
-cd ..
+popd
 
 %if %{with_zts}
 # Duplicate source tree for NTS / ZTS build
@@ -84,7 +104,7 @@ cp -pr NTS ZTS
 
 
 %build
-cd NTS
+pushd NTS
 %{_bindir}/phpize
 %configure \
     --enable-xdebug  \
@@ -98,14 +118,16 @@ pushd debugclient
 %configure --with-libedit
 make %{?_smp_mflags}
 popd
+popd
 
 %if %{with_zts}
-cd ../ZTS
+pushd ZTS
 %{_bindir}/zts-phpize
 %configure \
     --enable-xdebug  \
     --with-php-config=%{_bindir}/zts-php-config
 make %{?_smp_mflags}
+popd
 %endif
 
 
@@ -150,13 +172,13 @@ done
 
 %check
 # only check if build extension can be loaded
-%{_bindir}/php \
+%{__php} \
     --no-php-ini \
     --define zend_extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
     --modules | grep Xdebug
 
 %if %{with_zts}
-%{_bindir}/zts-php \
+%{__ztsphp} \
     --no-php-ini \
     --define zend_extension=%{buildroot}%{php_ztsextdir}/%{pecl_name}.so \
     --modules | grep Xdebug
@@ -179,6 +201,9 @@ done
 
 
 %changelog
+* Sat Dec 10 2016 Carl George <carl.george@rackspace.com> - 2.5.0-1.ius
+- Port from Fedora to IUS
+
 * Mon Dec  5 2016 Remi Collet <remi@fedoraproject.org> - 2.5.0-1
 - update to 2.5.0
 
