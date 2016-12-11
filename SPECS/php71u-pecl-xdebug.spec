@@ -29,7 +29,7 @@ License:        PHP
 Group:          Development/Languages
 URL:            http://xdebug.org/
 
-BuildRequires:  php-pear  > 1.9.1
+BuildRequires:  pecl >= 1.10.0
 BuildRequires:  %{php_base}-devel
 BuildRequires:  libedit-devel
 BuildRequires:  libtool
@@ -204,6 +204,7 @@ done
 * Sat Dec 10 2016 Carl George <carl.george@rackspace.com> - 2.5.0-1.ius
 - Port from Fedora to IUS
 - Install package.xml as %%{pecl_name}.xml, not %%{name}.xml
+- Build with pear1u (via "pecl" virtual provides)
 
 * Mon Dec  5 2016 Remi Collet <remi@fedoraproject.org> - 2.5.0-1
 - update to 2.5.0
