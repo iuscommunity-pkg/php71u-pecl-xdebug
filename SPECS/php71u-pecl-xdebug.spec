@@ -12,16 +12,17 @@
 #
 
 %global pecl_name xdebug
-%global with_zts  0%{?__ztsphp:1}
 # XDebug should be loaded after opcache
 %global ini_name  15-%{pecl_name}.ini
-%global php_base  php71u
+%global php       php71u
 
-Name:           %{php_base}-pecl-xdebug
+%bcond_without zts
+
+Name:           %{php}-pecl-%{pecl_name}
 Summary:        PECL package for debugging PHP scripts
-Version:        2.5.5
+Version:        2.6.0
 Release:        1.ius%{?dist}
-Source0:        http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
+Source0:        https://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
 # The Xdebug License, version 1.01
 # (Based on "The PHP License", version 3.0)
@@ -29,8 +30,14 @@ License:        PHP
 Group:          Development/Languages
 URL:            http://xdebug.org/
 
+# Explicitly require pecl (pear1u) dependencies to avoid conflicts
+BuildRequires:  %{php}-cli
+BuildRequires:  %{php}-common
+BuildRequires:  %{php}-devel
+BuildRequires:  %{php}-process
+BuildRequires:  %{php}-xml
 BuildRequires:  pecl >= 1.10.0
-BuildRequires:  %{php_base}-devel
+
 BuildRequires:  libedit-devel
 BuildRequires:  libtool
 
@@ -47,14 +54,14 @@ Provides:       php-pecl-%{pecl_name}%{?_isa} = %{version}
 # provide the stock and IUS names without pecl
 Provides:       php-%{pecl_name} = %{version}
 Provides:       php-%{pecl_name}%{?_isa} = %{version}
-Provides:       %{php_base}-%{pecl_name} = %{version}
-Provides:       %{php_base}-%{pecl_name}%{?_isa} = %{version}
+Provides:       %{php}-%{pecl_name} = %{version}
+Provides:       %{php}-%{pecl_name}%{?_isa} = %{version}
 
 # provide the stock and IUS names in pecl() format
 Provides:       php-pecl(Xdebug) = %{version}
 Provides:       php-pecl(Xdebug)%{?_isa} = %{version}
-Provides:       %{php_base}-pecl(Xdebug) = %{version}
-Provides:       %{php_base}-pecl(Xdebug)%{?_isa} = %{version}
+Provides:       %{php}-pecl(Xdebug) = %{version}
+Provides:       %{php}-pecl(Xdebug)%{?_isa} = %{version}
 
 # conflict with the stock name
 Conflicts:      php-pecl-%{pecl_name} < %{version}
@@ -89,19 +96,14 @@ mv %{pecl_name}-%{version} NTS
 
 sed -e '/LICENSE/s/role="doc"/role="src"/' -i package.xml
 
-pushd NTS
-
 # Check extension version
-ver=$(sed -n '/XDEBUG_VERSION/{s/.* "//;s/".*$//;p}' php_xdebug.h)
+ver=$(sed -n '/XDEBUG_VERSION/{s/.* "//;s/".*$//;p}' NTS/php_xdebug.h)
 if test "$ver" != "%{version}"; then
    : Error: Upstream XDEBUG_VERSION version is ${ver}, expecting %{version}.
    exit 1
 fi
 
-popd
-
-%if %{with_zts}
-# Duplicate source tree for NTS / ZTS build
+%if %{with zts}
 cp -pr NTS ZTS
 %endif
 
@@ -120,24 +122,24 @@ pushd NTS
 %configure \
     --enable-xdebug  \
     --with-php-config=%{_bindir}/php-config
-make %{?_smp_mflags}
+%make_build
 
 # Build debugclient
 pushd debugclient
 # buildconf required for aarch64 support
 ./buildconf
 %configure --with-libedit
-make %{?_smp_mflags}
+%make_build
 popd
 popd
 
-%if %{with_zts}
+%if %{with zts}
 pushd ZTS
 %{_bindir}/zts-phpize
 %configure \
     --enable-xdebug  \
     --with-php-config=%{_bindir}/zts-php-config
-make %{?_smp_mflags}
+%make_build
 popd
 %endif
 
@@ -154,7 +156,7 @@ install -Dpm 755 NTS/debugclient/debugclient \
 # install package registration file
 install -Dpm 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
 
-%if %{with_zts}
+%if %{with zts}
 # Install ZTS extension
 make -C ZTS install INSTALL_ROOT=%{buildroot}
 install -Dpm 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
@@ -173,7 +175,7 @@ done
     --define zend_extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
     --modules | grep Xdebug
 
-%if %{with_zts}
+%if %{with zts}
 %{__ztsphp} \
     --no-php-ini \
     --define zend_extension=%{buildroot}%{php_ztsextdir}/%{pecl_name}.so \
@@ -200,13 +202,16 @@ fi
 %config(noreplace) %{php_inidir}/%{ini_name}
 %{php_extdir}/%{pecl_name}.so
 
-%if %{with_zts}
+%if %{with zts}
 %config(noreplace) %{php_ztsinidir}/%{ini_name}
 %{php_ztsextdir}/%{pecl_name}.so
 %endif
 
 
 %changelog
+* Tue Jan 30 2018 Carl George <carl@george.computer> - 2.6.0-1.ius
+- Latest upstream
+
 * Wed Jun 21 2017 Ben Harper <ben.harper@rackspace.com> - 2.5.5-1.ius
 - Latest upstream
 
