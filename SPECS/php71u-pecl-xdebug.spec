@@ -28,7 +28,7 @@ Source0:        https://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 # (Based on "The PHP License", version 3.0)
 License:        PHP
 Group:          Development/Languages
-URL:            http://xdebug.org/
+URL:            https://xdebug.org
 
 # Explicitly require pecl (pear1u) dependencies to avoid conflicts
 BuildRequires:  %{php}-cli
@@ -99,7 +99,7 @@ sed -e '/LICENSE/s/role="doc"/role="src"/' -i package.xml
 # Check extension version
 ver=$(sed -n '/XDEBUG_VERSION/{s/.* "//;s/".*$//;p}' NTS/php_xdebug.h)
 if test "$ver" != "%{version}"; then
-   : Error: Upstream XDEBUG_VERSION version is ${ver}, expecting %{version}.
+   : Error: Upstream version is ${ver}, expecting %{version}.
    exit 1
 fi
 
@@ -145,31 +145,26 @@ popd
 
 
 %install
-# install NTS extension
 make -C NTS install INSTALL_ROOT=%{buildroot}
-install -Dpm 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
+install -D -p -m 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
 # install debugclient
 install -Dpm 755 NTS/debugclient/debugclient \
         %{buildroot}%{_bindir}/debugclient
 
-# install package registration file
-install -Dpm 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
-
 %if %{with zts}
-# Install ZTS extension
 make -C ZTS install INSTALL_ROOT=%{buildroot}
-install -Dpm 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
+install -D -p -m 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
 %endif
 
-# Documentation
+install -D -p -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
+
 for i in $(grep 'role="doc"' package.xml | sed -e 's/^.*name="//;s/".*$//')
-do install -Dpm 644 NTS/$i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
+do install -D -p -m 644 NTS/$i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
 done
 
 
 %check
-# only check if build extension can be loaded
 %{__php} \
     --no-php-ini \
     --define zend_extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
